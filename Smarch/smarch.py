@@ -1,0 +1,413 @@
+"""
+Smarch - random sampling of propositional formula solutions
+Version - 0.1
+"""
+
+
+import random
+from subprocess import getoutput
+import pycosat
+import os
+import time
+import sys
+import getopt
+
+from anytree import AnyNode
+from anytree.exporter import JsonExporter
+from anytree.importer import JsonImporter
+
+srcdir = os.path.dirname(os.path.abspath(__file__))
+SHARPSAT = srcdir + '/sharpSAT/Release/sharpSAT'
+MARCH = srcdir + '/march_cu/march_cu'
+
+
+# read dimacs file
+def read_dimacs(dimacsfile_):
+    _features = list()
+    _clauses = list()
+    _vcount = '-1'  # required for variables without names
+
+    with open(dimacsfile_) as f:
+        for line in f:
+            # read variables in comments
+            if line.startswith("c"):
+                line = line[0:len(line) - 1]
+                _feature = line.split(" ", 4)
+                del _feature[0]
+                _features.append(tuple(_feature))
+            # read dimacs properties
+            elif line.startswith("p"):
+                info = line.split()
+                _vcount = info[2]
+            # read clauses
+            else:
+                info = line.split()
+                if len(info) != 0:
+                    _clauses.append(list(map(int, info[:len(info)-1])))
+                    #_clauses.append(line.strip('\n'))
+
+    return _features, _clauses, _vcount
+
+
+# read constraint file. ! means negation
+def read_constraints(constfile_, features_):
+    _const = list()
+
+    if os.path.exists(constfile_):
+        names = [i[1] for i in features_]
+        with open(constfile_) as file:
+            for line in file:
+                line = line.rstrip()
+                data = line.split()
+                clause = list()
+                for name in data:
+                    prefix = 1
+                    if name.startswith('-'):
+                        name = name[1:len(name)]
+                        prefix = -1
+
+                    if name in names:
+                        i = names.index(name)
+                        clause.append(int(features_[i][0]) * prefix)
+
+                _const.append(clause)
+                print("Added constraint: " + line + " " + str(clause))
+
+                # line = line[0:len(line) - 1]
+                # prefix = ''
+                # if line.startswith('!'):
+                #     line = line[1:len(line)]
+                #     prefix = '-'
+                #
+                # # filter features that does not exist
+                # if line in names:
+                #     i = names.index(line)
+                #     _const.append(prefix + features_[i][0])
+                #     print("Added constraint: " + prefix + features_[i][0] + "," + prefix + features_[i][1])
+    else:
+        print("Constraint file not found")
+
+    return _const
+
+
+# read constraint file. - means negation
+def get_var(flist, features_):
+    _const = list()
+    names = [i[1] for i in features_]
+
+    for feature in flist:
+        #feature = feature[0:len(feature) - 1]
+        prefix = ''
+        if feature.startswith('-'):
+            feature = feature[1:len(feature)]
+            prefix = '-'
+
+        # filter features that does not exist
+        if feature in names:
+            i = names.index(feature)
+            _const.append(prefix + features_[i][0])
+            # print("Added constraint: " + prefix + features_[i][0] + "," + prefix + features_[i][1])
+
+    return _const
+
+
+# TODO: replace first line, append constraints
+def gen_dimacs(vars_, clauses_, constraints_, outfile_):
+    f = open(outfile_, 'w')
+
+    f.write('p cnf ' + vars_ + ' ' + str(len(clauses_) + len(constraints_)) + '\n')
+
+    for cl in clauses_:
+        #f.write(cl + '\n')
+        f.write(" ".join(str(x) for x in cl) + ' 0 \n')
+
+    for ct in constraints_:
+        f.write(ct + ' 0 \n')
+
+    f.close()
+
+
+# count dimacs solutions with given constraints
+def count(dimacs_, constraints_):
+    _tempdimacs = os.path.dirname(dimacs_) + '/count.dimacs'
+    _features, _clauses, _vcount = read_dimacs(dimacs_)
+
+    gen_dimacs(_vcount, _clauses, constraints_, _tempdimacs)
+    res = int(getoutput(SHARPSAT + ' -q ' + _tempdimacs))
+
+    return res
+
+
+def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
+    if not os.path.exists(wdir_):
+        os.makedirs(wdir_)
+    sdir = wdir_ + "/smarch/samples"
+    if not os.path.exists(sdir):
+        os.makedirs(sdir)
+
+    samples = list()
+
+    # count number of solutions from given clauses and constraints
+    def partition(constraints_, current_, tree_):
+        _total = 0
+        _counts = list()
+        _cubes = list()
+        _freevar = list()
+        _dimacsfile = wdir_ + '/dimacs.smarch'
+        _cubefile = wdir_ + '/cubes.smarch'
+
+        # create dimacs file regarding constraints
+        gen_dimacs(vcount_, clauses_, constraints_, _dimacsfile)
+
+        # execute march to get cubes
+        res = getoutput(MARCH + ' ' + _dimacsfile + ' -d 5 -# -o ' + _cubefile)
+        out = res.split("\n")
+
+        # print march result (debugging purpose)
+        # print(out)
+
+        if out[7].startswith('c all'):
+            _freevar = out[5].split(": ")[1].split()
+
+        with open(_cubefile) as f:
+            for _line in f:
+                _cube = list(_line.split())
+                _cubes.append(_cube)
+
+        # execute sharpSAT to count solutions
+        for _cube in _cubes:
+            gen_dimacs(vcount_, clauses_, _cube + constraints_, _dimacsfile)
+            res = int(getoutput(SHARPSAT + ' -q ' + _dimacsfile))
+            # print(res)
+            _total += res
+            _counts.append(res)
+
+        # double check if all variables are free
+        if _total != pow(2, len(_freevar)):
+            _freevar.clear()
+
+        # set total number of solutions
+        current_.count = _total
+
+        if tree_:
+            # extend tree - do not extend if all variables are free
+            if len(_freevar) == 0:
+                for _i in range(0, len(_counts)):
+                    _node = AnyNode(parent=current_, count=_counts[_i], cube=_cubes[_i])
+
+        return [_freevar, _counts, _cubes, _total]
+
+    # generate n random numbers for sampling
+    def get_random(rcount_, total_):
+        def gen_random():
+            while True:
+                yield random.randrange(1, total_, 1)
+
+        def gen_n_unique(source, n__):
+            seen = set()
+            seenadd = seen.add
+            for i in (i for i in source() if i not in seen and not seenadd(i)):
+                yield i
+                if len(seen) == n__:
+                    break
+
+        return [i for i in gen_n_unique(gen_random, min(rcount_, int(total_ - 1)))]
+
+    # select a cube based on given random number
+    def select_cube(counts_, cubes_, number_):
+        _terminate = False
+        _index = -1
+        _i = 0
+
+        for c in counts_:
+            if number_ <= c:
+                _index = _i
+                if c == 1:
+                    _terminate = True
+                break
+            else:
+                number_ -= c
+            _i += 1
+
+        return cubes_[_index], number_, _terminate
+
+    # traverse the cube tree based on given random number
+    def traverse_cube(current_, number_):
+        _assigned = list()
+        _terminate = False
+        #_assigned = _assigned + _current.cube
+
+        while len(current_.children) != 0 or current_.count != 1:
+            for node in current_.children:
+                if number_ <= node.count:
+                    _assigned = _assigned + node.cube
+                    current_ = node
+                    break
+                else:
+                    number_ -= node.count
+            break
+
+        if current_.count == 1:
+            _terminate = True
+
+        return _assigned, number_, _terminate, current_
+
+    # assign free variables without recursion
+    def set_freevar(freevar_, number_):
+        _vars = list()
+
+        for v in freevar_:
+            if number_ % 2 == 1:
+                _vars.append(v)
+            else:
+                _vars.append('-'+v)
+            number_ //= 2
+
+        return _vars
+
+    clauses_ = clauses_ + const_
+
+    root = AnyNode(count=-1, cube=[])
+    print("Counting - ", end='')
+    freevar = partition([], root, cache_)
+
+    print("Total configurations: " + str(freevar[3]))
+
+    start_time = time.time()
+
+    # generate random numbers
+    rands = get_random(n_, freevar[3])
+
+    i = start_
+
+    # sample for each random number
+    for r in rands:
+        print("Sampling " + str(i) + " with " + str(r) + " - ", end='')
+        sample_time = time.time()
+
+        # initialize variables
+        number = r
+        assigned = list()
+        current = root
+
+        if len(freevar[0]) != 0:  # all variables free, sampling done
+            assigned = assigned + set_freevar(freevar[0], int(number))
+            #print("all free")
+            terminate = True
+        else:  # select cube to recurse
+            if cache_:
+                cube, number, terminate, current = traverse_cube(current, number)
+            else:
+                cube, number, terminate = select_cube(freevar[1], freevar[2], number)
+            assigned = assigned + cube
+            terminate = False
+            if len(cube) == 0:
+                print("ERROR: cube not selected")
+                exit()
+
+        # recurse
+        while not terminate:
+            r_freevar = partition(assigned, current, cache_)
+
+            if len(r_freevar[0]) != 0:  # all variables free, sampling done
+                assigned = assigned + set_freevar(r_freevar[0], int(number))
+                #print("all free")
+                terminate = True
+            else:
+                # select cube to recurse
+                if cache_:
+                    cube, number, terminate, current = traverse_cube(current, number)
+                else:
+                    cube, number, terminate = select_cube(r_freevar[1], r_freevar[2], number)
+                assigned = assigned + cube
+
+                if len(cube) == 0:
+                    print("ERROR: cube not selected")
+                    exit()
+                else:
+                    if terminate:
+                        # all variables determined
+                        terminate = True
+
+        assigned = list(map(int, assigned))
+        aclause = [assigned[i:i+1] for i in range(0, len(assigned))]
+        cnf = clauses_ + aclause
+        s = pycosat.solve(cnf)
+
+        # print(s)
+
+        # sdimacs = sdir + "/" + str(i) + ".dimacs"
+        # gen_dimacs(vcount_, clauses_, assigned, sdimacs)
+        # getoutput("minisat " + sdimacs + " " + sdir + "/" + str(i) + ".sol")
+        # res = int(getoutput(SHARPSAT + ' -q ' + sdimacs))
+        # print(res)
+
+        # print(len(s))
+        samples.append(set(s))
+
+        print("sampling time: " + str(time.time() - sample_time))
+        i += 1
+
+    print("--- total time: %s seconds ---" % (time.time() - start_time))
+
+    if cache_:
+        exporter = JsonExporter()
+        with open(wdir_ + "/tree.json", 'w') as file:
+            file.write(exporter.export(root))
+            file.close()
+
+    return samples
+
+
+# run script
+if __name__ == "__main__":
+    # get parameters from console
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hc:o:s:l", ['help', "cfile=", "odir=", "start=", 'log'])
+    except getopt.GetoptError:
+        print('smarch.py -c <constfile> -o <outputdir> -s <start> -l | <dimacsfile> <samplecount>')
+        sys.exit(2)
+
+    if len(args) < 2:
+        print('smarch.py -c <constfile> -o <outputdir> -s <start> -l | <dimacsfile> <samplecount>')
+        sys.exit(2)
+
+    dimacs = args[0]
+    n = int(args[1])
+
+    print('Input file: ', dimacs)
+    print('Number of samples: ', n)
+
+    wdir = os.path.dirname(dimacs) + "/smarch"
+    constfile = ''
+    start = 1
+    cache = False
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print('smarch.py -c <constfile> -o <outputdir> -s <start> -l | <dimacsfile> <samplecount>')
+            sys.exit()
+        elif opt in ("-c", "--cfile"):
+            constfile = arg
+            print("Consraint file: " + constfile)
+        elif opt in ("-o", "--odir"):
+            wdir = arg
+            print("Output directory: " + wdir)
+        elif opt in ("-s", "--start"):
+            start = int(arg)
+            print("Starting number:" + arg)
+        elif opt in ("-l", "--log"):
+            start = int(arg)
+            cache = True
+        else:
+            print("Invalid option: " + opt)
+
+    features, clauses, vcount = read_dimacs(dimacs)
+    const = list()
+    if constfile != '':
+        read_constraints(constfile, features)
+
+    samples = sample(vcount, clauses, n, wdir, const, cache, start)
+
+    print('Output created on: ', wdir)
+

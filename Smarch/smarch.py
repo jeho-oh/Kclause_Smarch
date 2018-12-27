@@ -1,5 +1,5 @@
 """
-Smarch - random sampling of propositional formula solutions
+Smarch - uniform random sampling of propositional formula solutions
 Version - 0.1
 """
 
@@ -49,7 +49,7 @@ def read_dimacs(dimacsfile_):
     return _features, _clauses, _vcount
 
 
-# read constraint file. ! means negation
+# read constraint file. '-' means negation
 def read_constraints(constfile_, features_):
     _const = list()
 
@@ -90,7 +90,7 @@ def read_constraints(constfile_, features_):
     return _const
 
 
-# read constraint file. - means negation
+# convert feature names into variable numbers
 def get_var(flist, features_):
     _const = list()
     names = [i[1] for i in features_]
@@ -409,5 +409,9 @@ if __name__ == "__main__":
 
     samples = sample(vcount, clauses, n, wdir, const, cache, start)
 
-    print('Output created on: ', wdir)
+    with open(wdir + '/samples.txt', 'w') as f:
+        for s in samples:
+            f.write("%s\n" % str(s))
+
+    print('Output created on: ', wdir + '/samples.txt')
 

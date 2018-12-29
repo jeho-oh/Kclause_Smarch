@@ -1,6 +1,5 @@
 """
-Smarch - uniform random sampling of propositional formula solutions
-Version - 0.1
+Smarch - random sampling of propositional formula solutions
 """
 
 
@@ -21,8 +20,9 @@ SHARPSAT = srcdir + '/sharpSAT/Release/sharpSAT'
 MARCH = srcdir + '/march_cu/march_cu'
 
 
-# read dimacs file
 def read_dimacs(dimacsfile_):
+    """parse variables and clauses from a dimacs file"""
+
     _features = list()
     _clauses = list()
     _vcount = '-1'  # required for variables without names
@@ -49,8 +49,10 @@ def read_dimacs(dimacsfile_):
     return _features, _clauses, _vcount
 
 
-# read constraint file. '-' means negation
+#
 def read_constraints(constfile_, features_):
+    """read constraint file. - means negation"""
+
     _const = list()
 
     if os.path.exists(constfile_):
@@ -90,8 +92,9 @@ def read_constraints(constfile_, features_):
     return _const
 
 
-# convert feature names into variable numbers
 def get_var(flist, features_):
+    """convert feature names into variables"""
+
     _const = list()
     names = [i[1] for i in features_]
 
@@ -111,8 +114,9 @@ def get_var(flist, features_):
     return _const
 
 
-# TODO: replace first line, append constraints
 def gen_dimacs(vars_, clauses_, constraints_, outfile_):
+    """generate a dimacs file from given clauses and constraints"""
+
     f = open(outfile_, 'w')
 
     f.write('p cnf ' + vars_ + ' ' + str(len(clauses_) + len(constraints_)) + '\n')
@@ -127,8 +131,9 @@ def gen_dimacs(vars_, clauses_, constraints_, outfile_):
     f.close()
 
 
-# count dimacs solutions with given constraints
 def count(dimacs_, constraints_):
+    """count dimacs solutions with given constraints"""
+
     _tempdimacs = os.path.dirname(dimacs_) + '/count.dimacs'
     _features, _clauses, _vcount = read_dimacs(dimacs_)
 
@@ -138,7 +143,9 @@ def count(dimacs_, constraints_):
     return res
 
 
-def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
+def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
+    """sample configurations"""
+
     if not os.path.exists(wdir_):
         os.makedirs(wdir_)
     sdir = wdir_ + "/smarch/samples"
@@ -147,8 +154,8 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
 
     samples = list()
 
-    # count number of solutions from given clauses and constraints
-    def partition(constraints_, current_, tree_):
+    # partition space by cubes and count number of solutions for each cube
+    def partition(assigned_, current_, tree_):
         _total = 0
         _counts = list()
         _cubes = list()
@@ -157,7 +164,7 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
         _cubefile = wdir_ + '/cubes.smarch'
 
         # create dimacs file regarding constraints
-        gen_dimacs(vcount_, clauses_, constraints_, _dimacsfile)
+        gen_dimacs(vcount_, clauses_, assigned_, _dimacsfile)
 
         # execute march to get cubes
         res = getoutput(MARCH + ' ' + _dimacsfile + ' -d 5 -# -o ' + _cubefile)
@@ -176,13 +183,13 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
 
         # execute sharpSAT to count solutions
         for _cube in _cubes:
-            gen_dimacs(vcount_, clauses_, _cube + constraints_, _dimacsfile)
+            gen_dimacs(vcount_, clauses_, assigned_ + _cube, _dimacsfile)
             res = int(getoutput(SHARPSAT + ' -q ' + _dimacsfile))
             # print(res)
             _total += res
             _counts.append(res)
 
-        # double check if all variables are free
+        # double check if all variables are free (nonempty freevar means all free)
         if _total != pow(2, len(_freevar)):
             _freevar.clear()
 
@@ -231,7 +238,7 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
 
         return cubes_[_index], number_, _terminate
 
-    # traverse the cube tree based on given random number
+    # traverse the cube tree based on given random number (requires cache_=True)
     def traverse_cube(current_, number_):
         _assigned = list()
         _terminate = False
@@ -300,7 +307,7 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
             else:
                 cube, number, terminate = select_cube(freevar[1], freevar[2], number)
             assigned = assigned + cube
-            terminate = False
+
             if len(cube) == 0:
                 print("ERROR: cube not selected")
                 exit()
@@ -313,8 +320,7 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
                 assigned = assigned + set_freevar(r_freevar[0], int(number))
                 #print("all free")
                 terminate = True
-            else:
-                # select cube to recurse
+            else:  # select cube to recurse
                 if cache_:
                     cube, number, terminate, current = traverse_cube(current, number)
                 else:
@@ -324,11 +330,8 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
                 if len(cube) == 0:
                     print("ERROR: cube not selected")
                     exit()
-                else:
-                    if terminate:
-                        # all variables determined
-                        terminate = True
 
+        # verify if sample is valid and assign dead variables using pycosat
         assigned = list(map(int, assigned))
         aclause = [assigned[i:i+1] for i in range(0, len(assigned))]
         cnf = clauses_ + aclause
@@ -357,6 +360,20 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=True, start_=1):
             file.close()
 
     return samples
+
+
+# test script
+# n = 10
+# target = "axtls_2_1_4"
+#
+# dimacs = "/home/jeho/kmax/kconfig_case_studies/cases/" + target + "/build/kconfig.dimacs"
+# constfile = os.path.dirname(dimacs) + "/constraints.txt"
+# wdir = os.path.dirname(dimacs) + "/smarch"
+#
+# features, clauses, vcount = read_dimacs(dimacs)
+# const = read_constraints(constfile, features)
+#
+# samples = sample(vcount, clauses, n, wdir, const, True, 1)
 
 
 # run script
@@ -409,9 +426,5 @@ if __name__ == "__main__":
 
     samples = sample(vcount, clauses, n, wdir, const, cache, start)
 
-    with open(wdir + '/samples.txt', 'w') as f:
-        for s in samples:
-            f.write("%s\n" % str(s))
-
-    print('Output created on: ', wdir + '/samples.txt')
+    print('Output created on: ', wdir)
 

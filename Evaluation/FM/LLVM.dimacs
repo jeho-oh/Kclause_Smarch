@@ -1,0 +1,13 @@
+c 1 time_passes
+c 2 gvn
+c 3 instcombine
+c 4 inline
+c 5 jump_threading
+c 6 simplifycfg
+c 7 sccp
+c 8 print_used_types
+c 9 ipsccp
+c 10 iv_users
+c 11 licm
+p cnf 11 1
+1 0

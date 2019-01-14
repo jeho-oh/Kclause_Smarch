@@ -1,18 +1,18 @@
 import os
 import time
 
-from smarch import sample, read_dimacs, read_constraints
+from Smarch.smarch import sample, read_dimacs, read_constraints
 from operator import itemgetter
 from scipy.stats import ttest_ind, pearsonr
-from evaluation import GT, BN
+from Evaluation.kconfigIO import gen_configs_kmax, build_samples
 
 
 # find noteworthy features from benchmarked samples
-def get_noteworthy(measurements, obj):
+def get_noteworthy(measurements, obj_):
     noteworthy = list()
 
     # sort by objective
-    sortedlist = sorted(measurements, key=itemgetter(obj), reverse=False)
+    sortedlist = sorted(measurements, key=itemgetter(obj_), reverse=False)
 
     # find common features from best two measurements
     common = list(set(sortedlist[0][0]).intersection(sortedlist[1][0]))
@@ -24,19 +24,79 @@ def get_noteworthy(measurements, obj):
 
         for m in measurements:
             if c in m[0]:
-                in_measure.append(m[obj])
+                in_measure.append(m[obj_])
             else:
-                ex_measure.append(m[obj])
+                ex_measure.append(m[obj_])
 
         if len(in_measure) > 1 and len(ex_measure) > 1:
             stat, pvalue = ttest_ind(in_measure, ex_measure, equal_var=False)
 
             if stat < 0 and pvalue < 0.05:
-                const = list()
-                const.append(c)
-                noteworthy.append(const)
+                found = list()
+                found.append(c)
+                noteworthy.append(found)
 
     return noteworthy
+
+
+class BN:
+    wdir = ""
+    dimacs = ""
+    target = ""
+
+    def __init__(self, target_, dimacs_, wdir_):
+        self.target = target_
+        self.wdir = wdir_
+        self.dimacs = dimacs_
+
+        # check vagrant is up
+
+    def evaluate(self, samples):
+        # create .config files
+        gen_configs_kmax(self.dimacs, samples, self.wdir, )
+
+        # build samples
+        build_samples(self.target, 'build/configs')
+
+        # read build size reports
+        file = self.wdir + "/binary_sizes.txt"
+        buildsizes = list()
+        with open(file, 'r') as f:
+            for line in f:
+                data = line.split(' ')
+
+                if data[0] == 'binary':
+                    buildsizes.append(int(data[4]))
+
+        # create measurement set
+        measurements = list()
+        i = 0
+        for s in samples:
+            m = list()
+
+            m.append(s)
+            m.append(buildsizes[i])
+
+            measurements.append(m)
+            i += 1
+
+        return measurements
+
+    def evaluate_existing(self):
+        # build samples
+        build_samples(self.target, 'build/configs')
+
+        # read build size reports
+        file = self.wdir + "/binary_sizes.txt"
+        buildsizes = list()
+        with open(file, 'r') as f:
+            for line in f:
+                data = line.split(' ')
+
+                if data[0] == 'binary':
+                    buildsizes.append(int(data[4]))
+
+        return buildsizes
 
 
 class Searcher:
@@ -47,13 +107,11 @@ class Searcher:
     eval = list()
     wdir = ''
 
-    def __init__(self, target_, eval_):
-        dimacs = "/home/jeho/MOO/FM/" + target + ".dimacs"
-        constfile = "/home/jeho/MOO/FM/" + target + ".const"
-        self.wdir = os.path.dirname(dimacs) + "/smarch"
+    def __init__(self, dimacs_, constfile_, eval_):
+        self.wdir = os.path.dirname(dimacs_) + "/smarch"
 
-        self.features, self.clauses, self.vcount = read_dimacs(dimacs)
-        self.const = read_constraints(constfile, self.features)
+        self.features, self.clauses, self.vcount = read_dimacs(dimacs_)
+        self.const = read_constraints(constfile_, self.features)
 
         self.eval = eval_
 
@@ -76,13 +134,13 @@ class Searcher:
         else:
             return False, _noteworthy, _measurements
 
-    # SearchExtreme
-    def sx(self, n, objs, rmax=-1):
+    # recursive search
+    def srs(self, n_, objs, rmax=-1, verbose=False):
         popl = set()
 
         if len(objs) > 1:
             # sample initial configurations with constraints
-            initsamples = sample(self.vcount, self.clauses, n, self.wdir, self.const, False, 1)
+            initsamples = sample(self.vcount, self.clauses, n_, self.wdir, self.const, False, 1)
 
             # benchmark configurations
             measurements = self.eval.evaluate(initsamples)
@@ -112,10 +170,12 @@ class Searcher:
             r = 0
 
             while rec and (rmax == -1 or r < rmax):
-                print(">> Recursion: " + str(r))
-                rec, ntw, measurements = self._recurse(n, o, ntwf)
+                rec, ntw, measurements = self._recurse(n_, o, ntwf)
                 ntwf = ntwf + ntw
-                print("Added noteworthy features: " + str(ntw))
+
+                if verbose:
+                    print(">> Recursion: " + str(r))
+                    print("Added noteworthy features: " + str(ntw))
 
                 # collect measurements
                 for m in measurements:
@@ -124,15 +184,14 @@ class Searcher:
                     popl.add(tuple(m))
 
                 sortedlist = sorted(popl, key=itemgetter(1), reverse=False)
-                print("Recursion " + str(r) + " best: " + str(sortedlist[0][1:]))
-                print(str(sortedlist[0][0]))
+
+                if verbose:
+                    print("Recursion " + str(r) + " best: " + str(sortedlist[0][1:]))
+                    print(str(sortedlist[0][0]))
+
                 r += 1
 
         return popl
-
-    # SearchRegion
-    def sr(self, poi):
-        print(poi)
 
 
 # run script
@@ -141,16 +200,19 @@ if __name__ == "__main__":
     n = 20
     obj = [1]
 
-    eval = BN(target)
-    searcher = Searcher(target, eval)
+    dimacs = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".dimacs"
+    const = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".const"
+    wdir = os.path.dirname(dimacs) + "/smarch"
 
-    result = searcher.sx(n, [1], -1)
+    eval = BN(target, dimacs, wdir)
+    searcher = Searcher(dimacs, const, eval)
+
+    result = searcher.srs(n, [1], -1)
 
     print()
     print("<<Search results>>")
     print("N: " + str(len(result)))
-    sortedlist = sorted(result, key=itemgetter(1), reverse=False)
-    print("Best: " + str(sortedlist[0][1:]))
-    print(str(sortedlist[0][0]))
-    #rank = eval.get_rank(sortedlist[0][1], 1)
-    #print("Rank: " + str(rank))
+    result = sorted(result, key=itemgetter(1), reverse=False)
+    print("Best: " + str(result[0][1:]))
+    print(str(result[0][0]))
+

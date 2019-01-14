@@ -1,7 +1,7 @@
 import os
 from subprocess import getoutput, check_call
-from smarch import gen_dimacs, SHARPSAT
-from kconfigIO import read_dimacs, is_int
+from Smarch.smarch import read_dimacs, gen_dimacs, SHARPSAT
+from Evaluation.kconfigIO import is_int
 
 CONFIG = 'bash /home/jeho/kmax/kconfig_case_studies/checkSamples.sh'
 

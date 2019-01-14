@@ -1,5 +1,6 @@
 """
 Smarch - random sampling of propositional formula solutions
+Version - 0.1
 """
 
 
@@ -34,6 +35,7 @@ def read_dimacs(dimacsfile_):
                 line = line[0:len(line) - 1]
                 _feature = line.split(" ", 4)
                 del _feature[0]
+                _feature[0] = int(_feature[0])
                 _features.append(tuple(_feature))
             # read dimacs properties
             elif line.startswith("p"):
@@ -49,7 +51,6 @@ def read_dimacs(dimacsfile_):
     return _features, _clauses, _vcount
 
 
-#
 def read_constraints(constfile_, features_):
     """read constraint file. - means negation"""
 
@@ -61,31 +62,37 @@ def read_constraints(constfile_, features_):
             for line in file:
                 line = line.rstrip()
                 data = line.split()
-                clause = list()
-                for name in data:
-                    prefix = 1
-                    if name.startswith('-'):
-                        name = name[1:len(name)]
-                        prefix = -1
+                if len(data) != 0:
+                    clause = list()
 
-                    if name in names:
-                        i = names.index(name)
-                        clause.append(int(features_[i][0]) * prefix)
+                    error = False
+                    for name in data:
+                        prefix = 1
+                        if name.startswith('-'):
+                            name = name[1:len(name)]
+                            prefix = -1
 
-                _const.append(clause)
-                print("Added constraint: " + line + " " + str(clause))
+                        if name in names:
+                            i = names.index(name)
+                            clause.append(features_[i][0] * prefix)
+                        else:
+                            error = True
 
-                # line = line[0:len(line) - 1]
-                # prefix = ''
-                # if line.startswith('!'):
-                #     line = line[1:len(line)]
-                #     prefix = '-'
-                #
-                # # filter features that does not exist
-                # if line in names:
-                #     i = names.index(line)
-                #     _const.append(prefix + features_[i][0])
-                #     print("Added constraint: " + prefix + features_[i][0] + "," + prefix + features_[i][1])
+                    if not error:
+                        _const.append(clause)
+                        print("Added constraint: " + line + " " + str(clause))
+
+                    # line = line[0:len(line) - 1]
+                    # prefix = ''
+                    # if line.startswith('!'):
+                    #     line = line[1:len(line)]
+                    #     prefix = '-'
+                    #
+                    # # filter features that does not exist
+                    # if line in names:
+                    #     i = names.index(line)
+                    #     _const.append(prefix + features_[i][0])
+                    #     print("Added constraint: " + prefix + features_[i][0] + "," + prefix + features_[i][1])
     else:
         print("Constraint file not found")
 
@@ -100,16 +107,15 @@ def get_var(flist, features_):
 
     for feature in flist:
         #feature = feature[0:len(feature) - 1]
-        prefix = ''
+        prefix = 1
         if feature.startswith('-'):
             feature = feature[1:len(feature)]
-            prefix = '-'
+            prefix = -1
 
         # filter features that does not exist
         if feature in names:
             i = names.index(feature)
-            _const.append(prefix + features_[i][0])
-            # print("Added constraint: " + prefix + features_[i][0] + "," + prefix + features_[i][1])
+            _const.append(prefix * features_[i][0])
 
     return _const
 
@@ -126,7 +132,14 @@ def gen_dimacs(vars_, clauses_, constraints_, outfile_):
         f.write(" ".join(str(x) for x in cl) + ' 0 \n')
 
     for ct in constraints_:
-        f.write(ct + ' 0 \n')
+
+        if isinstance(ct, (list,)):
+            line = ""
+            for v in ct:
+                line = line + str(v) + " "
+            f.write(line + '0 \n')
+        else:
+            f.write(ct + ' 0 \n')
 
     f.close()
 
@@ -141,6 +154,18 @@ def count(dimacs_, constraints_):
     res = int(getoutput(SHARPSAT + ' -q ' + _tempdimacs))
 
     return res
+
+
+def checkSAT(dimacs_, constraints_):
+    """check satisfiability of given formula with constraints"""
+    _features, _clauses, _vcount = read_dimacs(dimacs_)
+    cnf = _clauses + constraints_
+    s = pycosat.solve(cnf)
+
+    if s == 'UNSAT':
+        return False
+    else:
+        return True
 
 
 def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
@@ -427,4 +452,3 @@ if __name__ == "__main__":
     samples = sample(vcount, clauses, n, wdir, const, cache, start)
 
     print('Output created on: ', wdir)
-

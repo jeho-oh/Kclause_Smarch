@@ -1,10 +1,11 @@
 import random
 import os
+import shutil
 from subprocess import check_call
 
-from smarch import read_dimacs
+from Smarch.smarch import read_dimacs
 
-BUILD = 'bash /home/jeho/kmax/kconfig_case_studies/buildSamples.sh'
+BUILD = 'bash /home/jeho-lab/git/kconfig_case_studies/buildSamples.sh'
 
 
 def is_int(s):
@@ -15,49 +16,19 @@ def is_int(s):
         return False
 
 
-# def gen_configs_kmax(dimacs_, cdir_):
-#     sdir = os.path.dirname(dimacs_) + "/smarch/samples"
-#     if not os.path.exists(sdir):
-#         print("ERROR: sample folder does not exist")
-#         return
-#
-#     features, clauses, vars = read_dimacs(dimacs_)
-#
-#     # generate .config files from samples
-#     for file in os.listdir(sdir):
-#         if file.endswith('.sol'):
-#             with open(sdir + "/" + file, 'r') as f:
-#                 name = file.split('.')[0]
-#                 data = f.read().split()
-#                 del data[0]
-#                 config = ""
-#                 for sel in data:
-#                     val = int(sel)
-#                     feature = features[abs(val) - 1]
-#
-#                     if val > 0:
-#                         if feature[2] == 'nonbool':
-#                             config = config + feature[1] + "=" + feature[3] + "\n"
-#                         else:
-#                             config = config + feature[1] + "=y\n"
-#
-#                     elif val < 0:
-#                         if feature[2] == 'nonbool':
-#                             if is_int(feature[3]):
-#                                 config = config + feature[1] + "=0\n"
-#                             else:
-#                                 config = config + feature[1] + "=\"\"\n"
-#                         else:
-#                             config = config + "# " + feature[1] + " is not set\n"
-#
-#                 with open(cdir_ + "/" + name + ".config", 'w') as outfile:
-#                     outfile.write(config)
-#                     outfile.close()
-#
-#     print("Configs generated")
-
-
 def gen_configs_kmax(dimacs_, samples_, cdir_):
+    # remove existing contents on the folder
+    for f in os.listdir(cdir_):
+        file_path = os.path.join(cdir_, f)
+        try:
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(e)
+
+    # get feature information
     features, clauses, vars = read_dimacs(dimacs_)
 
     # generate .config files from samples
@@ -118,8 +89,8 @@ def gen_configs_kcr(dimacs_):
                 config = ""
                 for sel in data:
                     val = int(sel)
-                    if str(abs(val)) in _indexes:
-                        i = _indexes.index(str(abs(val)))
+                    if abs(val) in _indexes:
+                        i = _indexes.index(abs(val))
                         feature = features[i][1]
                         if not feature.startswith('CONFIG_'):
                             feature = 'CONFIG_' + feature
@@ -185,8 +156,8 @@ def convert_kcr_to_kmax(kcr_, kmax_):
 
                 for sel in data:
                     val = int(sel)
-                    if str(abs(val)) in _kcri:
-                        i = _kcri.index(str(abs(val)))
+                    if abs(val) in _kcri:
+                        i = _kcri.index(abs(val))
                         feature = kcrf[i][1]
                         if not feature.startswith('CONFIG_'):
                             feature = 'CONFIG_' + feature
@@ -270,42 +241,6 @@ def read_config_kmax(features_, config_):
             sol.append('-' + str(f[0]))
 
     return sol
-
-
-def benchmark_PM(configs_, fvfile_, fifile_):
-    fvlist = dict()
-    filist = dict()
-
-    with open(fvfile_, 'r') as f:
-        for line in f:
-            raw = line.split(': ')
-            fvlist[raw[0]] = raw[1]
-
-    with open(fifile_, 'r') as f:
-        for line in f:
-            raw = line.split(': ')
-            filist[raw[0]] = raw[1]
-
-    for file in os.listdir(configs_):
-        if file.endswith('.config'):
-            with open(configs_ + "/" + file, 'r') as f:
-                selected = set()
-                perf = 0.0
-                for line in f:
-                    if not(line.startswith('#')):
-                        line = line[0:len(line) - 1]
-                        data = line.split('=')
-                        if len(data) > 1:
-                            if data[0] in fvlist:
-                                perf = perf + float(fvlist[data[0]])
-                        selected.add(data[0])
-
-                for fi in filist:
-                    fif = fi.split('#')
-                    if all(x in selected for x in fif):
-                        perf = perf + float(filist[fi])
-
-                print(file + "," + str(perf))
 
 
 def build_samples(target_, configs_):

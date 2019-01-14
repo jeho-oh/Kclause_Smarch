@@ -1,9 +1,9 @@
 import os
 from anytree import AnyNode
 from anytree.importer import JsonImporter
-from subprocess import getoutput, check_call
-from kconfigIO import read_dimacs, read_config_kmax, is_int
-from smarch import gen_dimacs, SHARPSAT
+from subprocess import getoutput
+from Evaluation.kconfigIO import read_config_kmax, is_int
+from Smarch.smarch import read_dimacs, gen_dimacs, SHARPSAT
 
 
 # select a cube based on given  number

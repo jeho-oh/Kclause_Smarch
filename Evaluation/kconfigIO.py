@@ -62,73 +62,68 @@ def gen_configs_kmax(dimacs_, samples_, cdir_):
     print("Configs generated")
 
 
-def gen_configs_kcr(dimacs_):
-    cdir = os.path.dirname(dimacs_) + "/configs"
-    if not os.path.exists(cdir):
-        os.makedirs(cdir)
-    sdir = os.path.dirname(dimacs_) + "/smarch/samples"
-    if not os.path.exists(sdir):
-        print("ERROR: sample folder does not exist")
-        return
-
-    flist = set()
-    with open(os.path.dirname(dimacs_) + '/output.features') as file:
+def gen_configs_kcr(target_, dimacs_, samples_, cdir_):
+    freevar = set()
+    with open(os.path.dirname(dimacs_) + '/' + target_ + '.features') as file:
         for line in file:
-            flist.add(line[0:len(line) - 1])
+            feature = line[0:len(line) - 1]
+            if not feature.startswith('CONFIG_'):
+                feature = 'CONFIG_' + feature
+            freevar.add(feature)
 
     features, clauses, vars = read_dimacs(dimacs_)
     _indexes = [i[0] for i in features]
 
     # generate .config files from samples
-    for file in os.listdir(sdir):
-        if file.endswith('.sol'):
-            with open(sdir + "/" + file, 'r') as f:
-                name = file.split('.')[0]
-                data = f.read().split()
-                del data[0]
-                config = ""
-                for sel in data:
-                    val = int(sel)
-                    if abs(val) in _indexes:
-                        i = _indexes.index(abs(val))
-                        feature = features[i][1]
-                        if not feature.startswith('CONFIG_'):
-                            feature = 'CONFIG_' + feature
+    n = 0
+    for s in samples_:
+        config = ""
+        for sel in s:
+            if abs(sel) in _indexes:
+                i = _indexes.index(abs(sel))
+                feature = features[i][1]
 
-                        if feature in flist:
-                            flist.remove(feature)
-                        #print(flist)
+                if not feature.startswith('CONFIG_'):
+                    feature = 'CONFIG_' + feature
 
-                        if feature != 'MODULES' and feature != 'CONFIG_MODULES' and 'CHOICE_' not in feature:
-                            if val > 0:
-                                if '=' in feature:
-                                    if '=' in feature:
-                                        finfo = feature.split('=')
-                                        if is_int(finfo[1]):
-                                            config = config + feature + "\n"
-                                        else:
-                                            if finfo[1] == 'n':
-                                                config = config + finfo[0] + '=0\n'
-                                            else:
-                                                config = config + finfo[0] + '=\"' + finfo[1] + "\"\n"
+                if feature in freevar:
+                    freevar.remove(feature)
 
-
+                if feature != 'MODULES' and feature != 'CONFIG_MODULES' and 'CHOICE_' not in feature:
+                    if sel > 0:
+                        if '=' in feature:
+                            if '=' in feature:
+                                finfo = feature.split('=')
+                                if is_int(finfo[1]):
+                                    config = config + feature + "\n"
                                 else:
-                                    config = config + feature + "=y\n"
-                            elif val < 0:
-                                if '=' not in feature:
-                                    config = config + "# " + feature + " is not set\n"
+                                    if finfo[1] == 'n':
+                                        config = config + finfo[0] + '=0\n'
+                                    else:
+                                        config = config + finfo[0] + '=\"' + finfo[1] + "\"\n"
+                        else:
+                            config = config + feature + "=y\n"
+                    elif sel < 0:
+                        if '=' not in feature:
+                            config = config + "# " + feature + " is not set\n"
+                else:
+                    if feature in freevar:
+                        freevar.remove(feature)
 
-                for fv in flist:
-                    r = random.random()
-                    if r < 0.5:
-                        config = config + "# " + fv + " is not set\n"
-                    else:
-                        config = config + fv + "=y\n"
+        for fv in freevar:
+            r = random.random()
+            if r < 0.5:
+                config = config + "# " + fv + " is not set\n"
+            else:
+                config = config + fv + "=y\n"
 
-                with open(cdir + "/" + name + ".config", 'w') as outfile:
-                    outfile.write(config)
-                    outfile.close()
+        with open(cdir_ + "/" + str(n) + ".config", 'w') as outfile:
+            outfile.write(config)
+            outfile.close()
+
+        n += 1
+
+    print("Configs generated")
 
 
 def convert_kcr_to_kmax(kcr_, kmax_):

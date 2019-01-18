@@ -1,7 +1,7 @@
 import os
 from operator import itemgetter
 
-from Smarch.smarch import read_dimacs, read_constraints, sample
+from Smarch.smarch import read_dimacs, read_constraints, sample, checkSAT
 from Evaluation.search import Searcher, BN
 
 target = "fiasco_17_10"
@@ -11,15 +11,23 @@ wdir = os.path.dirname(dimacs) + "/smarch"
 cdir = "/home/jeho-lab/git/kconfig_case_studies/cases/" + target + "/build/configs"
 eval = BN(target, dimacs, cdir)
 
+if not os.path.exists(cdir):
+    os.makedirs(cdir)
+
 # sample configurations
 features, clauses, vcount = read_dimacs(dimacs)
 const = read_constraints(constfile, features)
-samples = sample(vcount, clauses, 200, wdir, const, False, 201)
-#
-# measure build sizes
-measurements = eval.evaluate(samples)
-sortedlist = sorted(measurements, key=itemgetter(1), reverse=False)
 
+if checkSAT(dimacs, const):
+
+    samples = sample(vcount, clauses, 100, wdir, const, False, 1)
+    #
+    # measure build sizes
+    measurements = eval.evaluate(samples)
+    sortedlist = sorted(measurements, key=itemgetter(1), reverse=False)
+
+else:
+    print("Constraint not satisfiable")
 #measurements = eval.evaluate_existing()
 
 # # print measurements

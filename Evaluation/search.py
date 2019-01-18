@@ -4,7 +4,7 @@ import time
 from Smarch.smarch import sample, read_dimacs, read_constraints
 from operator import itemgetter
 from scipy.stats import ttest_ind, pearsonr
-from Evaluation.kconfigIO import gen_configs_kmax, build_samples
+from Evaluation.kconfigIO import gen_configs_kmax, gen_configs_kcr, build_samples
 
 
 # find noteworthy features from benchmarked samples
@@ -53,10 +53,22 @@ class BN:
 
     def evaluate(self, samples):
         # create .config files
-        gen_configs_kmax(self.dimacs, samples, self.wdir, )
+        gen_configs_kmax(self.dimacs, samples, self.wdir)
+        #gen_configs_kcr(self.target, self.dimacs, samples, self.wdir)
 
         # build samples
         build_samples(self.target, 'build/configs')
+
+        # check build errors
+        i = 0
+        file = self.wdir + "/return_codes.txt"
+        with open(file) as f:
+            for line in f:
+                if '0' not in line:
+                    i += 1
+
+        print("Number of failed configs: " + str(i))
+
 
         # read build size reports
         file = self.wdir + "/binary_sizes.txt"

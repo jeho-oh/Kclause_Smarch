@@ -409,29 +409,8 @@ def createCSV(inFile, outFile):
 
 target = "fiasco_17_10"
 dimacs = "/home/jeho-lab/git/kconfig_case_studies/cases/" + target + "/build/kconfig.dimacs"
-
-cdir = "/home/jeho-lab/git/kconfig_case_studies/cases/" + target + "/bugs/configs"
-# #cdir = "/home/jeho/kmax/kconfig_case_studies/cases/" + target + "/build/e260/A_D_H"
-
-# inferfile = "/home/jeho/kmax/kconfig_case_studies/bugs/infer/axtls/mapping.json"
-# analyze_infer(dimacs, cdir, inferfile)
-
-# clangfile = "/home/jeho/kmax/kconfig_case_studies/bugs/clang-4.0/axtls/unique.json.results.filtered"#axtls_clang-4.0_unique.json"
-# # clangfile = "/home/jeho/Downloads/Jeho/A_D_H/axtls_2_1_4/clang-4.0_results/unique.json.results.filtered"
-# analyze_clang(dimacs, cdir, clangfile)
-
-# cppfile = "/home/jeho/kmax/kconfig_case_studies/bugs/toybox_bug_report/config_occurrence_lists/configs_with_bugs.txt"
-# cppfile_paul = "/home/jeho/kmax/kconfig_case_studies/bugs/cppcheck/busybox_bug_report/busybox_report_unique.txt"
-# analyze_cpp_paul(dimacs, cdir, cppfile_paul)
-
-# inFile = "/home/jeho/kmax/kconfig_case_studies/bugs/clang-4.0/busybox/picked.json"
-# outFile = "/home/jeho/kmax/kconfig_case_studies/bugs/clang-4.0/busybox/picked_linewrap.json"
-# jsonLineChange(clangfile, clangfile + "csv")
-# createCSV(clangfile, clangfile + "csv")
-
-target = "fiasco_17_10"
-configlist = "/home/jeho-lab/git/kconfig_case_studies/cases/" + target + "/build/configs/return_codes.txt"
-cdir = "/home/jeho-lab/kmax/kconfig_case_studies/cases/" + target + "/build/configs"
+cdir = "/home/jeho-lab/git/kconfig_case_studies/cases/" + target + "/build/configs_kcr"
+configlist = cdir + "/return_codes.txt"
 
 constfile = os.path.dirname(dimacs) + "/constraints.txt"
 features, clauses, vcount = read_dimacs(dimacs)
@@ -439,5 +418,5 @@ const = read_constraints(constfile, features)
 
 check = analyze_build(dimacs, cdir, configlist)
 
-check_bias(dimacs, const, check, cdir)
-check_ratio(dimacs, const, check)
+# check_bias(dimacs, const, check, cdir)
+# check_ratio(dimacs, const, check)

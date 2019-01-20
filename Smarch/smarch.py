@@ -77,10 +77,13 @@ def read_constraints(constfile_, features_):
                             clause.append(features_[i][0] * prefix)
                         else:
                             error = True
+                            clause.append(name)
 
                     if not error:
                         _const.append(clause)
                         print("Added constraint: " + line + " " + str(clause))
+                    else:
+                        print("Feature not found" + str(clause))
 
                     # line = line[0:len(line) - 1]
                     # prefix = ''

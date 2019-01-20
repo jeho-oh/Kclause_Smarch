@@ -5,7 +5,7 @@ from subprocess import check_call
 
 from Smarch.smarch import read_dimacs
 
-BUILD = 'bash /home/jeho-lab/git/kconfig_case_studies/buildSamples.sh'
+BUILD = 'bash /home/jeho/kmax/kconfig_case_studies/buildSamples.sh'
 
 
 def is_int(s):
@@ -67,8 +67,9 @@ def gen_configs_kcr(target_, dimacs_, samples_, cdir_):
     with open(os.path.dirname(dimacs_) + '/' + target_ + '.features') as file:
         for line in file:
             feature = line[0:len(line) - 1]
-            if not feature.startswith('CONFIG_'):
-                feature = 'CONFIG_' + feature
+            if target_ not in ('axtls_2_1_4', 'uClibc-ng_1_0_29'):
+                if not feature.startswith('CONFIG_'):
+                    feature = 'CONFIG_' + feature
             freevar.add(feature)
 
     features, clauses, vars = read_dimacs(dimacs_)
@@ -83,8 +84,9 @@ def gen_configs_kcr(target_, dimacs_, samples_, cdir_):
                 i = _indexes.index(abs(sel))
                 feature = features[i][1]
 
-                if not feature.startswith('CONFIG_'):
-                    feature = 'CONFIG_' + feature
+                if target_ not in ('axtls_2_1_4', 'uClibc-ng_1_0_29'):
+                    if not feature.startswith('CONFIG_'):
+                        feature = 'CONFIG_' + feature
 
                 if feature in freevar:
                     freevar.remove(feature)

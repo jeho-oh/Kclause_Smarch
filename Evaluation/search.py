@@ -1,4 +1,4 @@
-import os
+import os, shutil
 import time
 
 from Smarch.smarch import sample, read_dimacs, read_constraints
@@ -43,18 +43,31 @@ class BN:
     wdir = ""
     dimacs = ""
     target = ""
+    kcr = False
 
-    def __init__(self, target_, dimacs_, wdir_):
+    def __init__(self, target_, dimacs_, wdir_, kcr_=False):
         self.target = target_
         self.wdir = wdir_
         self.dimacs = dimacs_
-
+        self.kcr = kcr_
         # check vagrant is up
 
     def evaluate(self, samples):
+
+        for file in os.listdir(self.wdir):
+            path = os.path.join(self.wdir, file)
+            try:
+                if os.path.isfile(path):
+                    os.unlink(path)
+                elif os.path.isdir(path): shutil.rmtree(path)
+            except Exception as e:
+                print(e)
+
         # create .config files
-        gen_configs_kmax(self.dimacs, samples, self.wdir)
-        #gen_configs_kcr(self.target, self.dimacs, samples, self.wdir)
+        if self.kcr:
+            gen_configs_kcr(self.target, self.dimacs, samples, self.wdir)
+        else:
+            gen_configs_kmax(self.dimacs, samples, self.wdir)
 
         # build samples
         build_samples(self.target, 'build/configs')
@@ -68,7 +81,6 @@ class BN:
                     i += 1
 
         print("Number of failed configs: " + str(i))
-
 
         # read build size reports
         file = self.wdir + "/binary_sizes.txt"

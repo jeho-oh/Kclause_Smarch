@@ -25,16 +25,12 @@ def traverse_cube(current_, sol_, number_):
     return current_, _precision, number_
 
 
-def get_rank(dimacs_, dir_):
+def get_rank(dimacs_, dir_, jsonfile_):
     # read dimacs file for feature list
     _features, _clauses, _vars = read_dimacs(dimacs_)
 
-    # read tree structure from file
-    _treefile = os.path.dirname(dimacs_) + '/smarch/tree.json'
-    # node = AnyNode(count=-1, cube=[])
-
-    if os.path.exists(_treefile):
-        with open(_treefile, 'r') as file:
+    if os.path.exists(jsonfile_):
+        with open(jsonfile_, 'r') as file:
             data = file.read()
             importer = JsonImporter()
             _root = importer.import_(data)
@@ -57,19 +53,19 @@ def get_rank(dimacs_, dir_):
                 _node, _precision, _number = traverse_cube(_node, sol, _number)
 
             if _precision > 0:
-                print(str(_number) + "," + str(_precision))
+                print(str(_number/total) + "," + str(_precision))
             else:
                 print("ERROR: tree traverse failure")
 
 
-def get_rank_kcr(dimacs_, solset_):
+def get_rank_kcr(dimacs_, solset_, jsonfile_):
 
     # read tree structure from file
     _treefile = os.path.dirname(dimacs_) + '/smarch/tree.json'
     # node = AnyNode(count=-1, cube=[])
 
-    if os.path.exists(_treefile):
-        with open(_treefile, 'r') as file:
+    if os.path.exists(jsonfile_):
+        with open(jsonfile_, 'r') as file:
             data = file.read()
             importer = JsonImporter()
             _root = importer.import_(data)

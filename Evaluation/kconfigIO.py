@@ -2,10 +2,12 @@ import random
 import os
 import shutil
 from subprocess import check_call
+from pathlib import Path
 
 from Smarch.smarch import read_dimacs
 
-BUILD = 'bash /home/jeho/kmax/kconfig_case_studies/buildSamples.sh'
+home = str(Path.home())
+BUILD = 'bash ' + home + '/kmax/kconfig_case_studies/buildSamples.sh'
 
 
 def is_int(s):
@@ -128,12 +130,7 @@ def gen_configs_kcr(target_, dimacs_, samples_, cdir_):
     print("Configs generated")
 
 
-def convert_kcr_to_kmax(kcr_, kmax_):
-    sdir = os.path.dirname(kcr_) + "/smarch/samples"
-    if not os.path.exists(sdir):
-        print("ERROR: sample folder does not exist")
-        return
-
+def convert_kcr_to_kmax(kcr_, kmax_, solset_):
     solset = list()
 
     kcrf, kcrc, kcrv = read_dimacs(kcr_)
@@ -142,51 +139,46 @@ def convert_kcr_to_kmax(kcr_, kmax_):
     _kcri = [i[0] for i in kcrf]
 
     # generate .config files from samples
-    for file in os.listdir(sdir):
-        if file.endswith('.sol'):
-            with open(sdir + "/" + file, 'r') as f:
-                name = file.split('.')[0]
-                data = f.read().split()
-                del data[0]
-                config = set()
-                sol = set()
+    for sol in solset_:
+        config = set()
+        ksol = set()
 
-                for sel in data:
-                    val = int(sel)
-                    if abs(val) in _kcri:
-                        i = _kcri.index(abs(val))
-                        feature = kcrf[i][1]
-                        if not feature.startswith('CONFIG_'):
-                            feature = 'CONFIG_' + feature
+        for sel in sol:
+            val = int(sel)
+            if abs(val) in _kcri:
+                i = _kcri.index(abs(val))
+                feature = kcrf[i][1]
+                # if not feature.startswith('CONFIG_'):
+                #     feature = 'CONFIG_' + feature
 
-                        if feature != 'MODULES' and feature != 'CONFIG_MODULES' and 'CHOICE_' not in feature:
-                            if val > 0:
-                                if '=' in feature:
-                                    if '=' in feature:
-                                        finfo = feature.split('=')
-                                        if finfo[1] == 'n':
-                                            config.add('-' + finfo[0])
-                                        else:
-                                            config.add(finfo[0])
+                if feature != 'MODULES' and feature != 'CONFIG_MODULES' and 'CHOICE_' not in feature:
+                    if val > 0:
+                        if '=' in feature:
+                            if '=' in feature:
+                                finfo = feature.split('=')
+                                if finfo[1] == 'n':
+                                    config.add('-' + finfo[0])
                                 else:
-                                    config.add(feature)
-                            elif val < 0:
-                                if '=' not in feature:
-                                    config.add('-' + feature)
-
-                for kf in kmaxf:
-                    if kf[1] in config:
-                        sol.add(kf[0])
-                    elif ('-'+kf[1]) in config:
-                        sol.add('-' + kf[0])
-                    else:
-                        r = random.random()
-                        if r < 0.5:
-                            sol.add(kf[0])
+                                    config.add(finfo[0])
                         else:
-                            sol.add('-' + kf[0])
+                            config.add(feature)
+                    elif val < 0:
+                        if '=' not in feature:
+                            config.add('-' + feature)
 
-                solset.append(sol)
+        for kf in kmaxf:
+            if str(kf[1]) in config:
+                ksol.add(kf[0])
+            elif ('-' + str(kf[1])) in config:
+                ksol.add(-1 * kf[0])
+            else:
+                r = random.random()
+                if r < 0.5:
+                    ksol.add(kf[0])
+                else:
+                    ksol.add(-1 * kf[0])
+
+        solset.append(ksol)
 
     return solset
 
@@ -207,7 +199,9 @@ def read_config_kmax(features_, config_):
                         i = _names.index(data[1])
                         _existing.add(data[1])
                         if i != -1:
-                            sol.append('-' + features_[i][0])
+                            sol.append(-1 * features_[i][0])
+                    # else:
+                    #     print(line)
             # line: FEATURE=y or FEATURE="nonbool value"
             else:
                 line = line[0:len(line) - 1]
@@ -217,10 +211,10 @@ def read_config_kmax(features_, config_):
                         i = _names.index(data[0])
                         _existing.add(data[0])
                         if data[1] == 'y':
-                            sol.append(str(features_[i][0]))
+                            sol.append(features_[i][0])
                         elif data[1] == '\"\"' or data[1] == '0':
                             if features_[i][3] != '\"\"' and features_[i][3] != '0':
-                                sol.append('-' + features_[i][0])
+                                sol.append(-1 * features_[i][0])
                             else:
                                 sol.append(features_[i][0])
                                 # r = random.random()
@@ -230,12 +224,14 @@ def read_config_kmax(features_, config_):
                                 # else:
                                 #     sol.append('-' + features_[i][0])
                         else:
-                            sol.append(str(features_[i][0]))
+                            sol.append(features_[i][0])
+                    # else:
+                    #     print(line)
 
     # set all nonexistent variables to false
     for f in features_:
         if f[1] not in _existing:
-            sol.append('-' + str(f[0]))
+            sol.append(-1 * f[0])
 
     return sol
 

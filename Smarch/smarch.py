@@ -135,14 +135,13 @@ def gen_dimacs(vars_, clauses_, constraints_, outfile_):
         f.write(" ".join(str(x) for x in cl) + ' 0 \n')
 
     for ct in constraints_:
-
         if isinstance(ct, (list,)):
             line = ""
             for v in ct:
                 line = line + str(v) + " "
             f.write(line + '0 \n')
         else:
-            f.write(ct + ' 0 \n')
+            f.write(str(ct) + ' 0 \n')
 
     f.close()
 

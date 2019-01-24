@@ -53,7 +53,7 @@ def get_rank(dimacs_, dir_, jsonfile_):
                 _node, _precision, _number = traverse_cube(_node, sol, _number)
 
             if _precision > 0:
-                print(str(_number/total) + "," + str(_precision))
+                print(str(_number/total) + "," + str(_precision/total))
             else:
                 print("ERROR: tree traverse failure")
 

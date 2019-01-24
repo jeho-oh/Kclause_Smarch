@@ -407,9 +407,10 @@ def createCSV(inFile, outFile):
     with open(outFile, 'w') as outfile:
         json.dump(data, outfile, indent=1)
 
+
 target = "fiasco_17_10"
-dimacs = "/home/jeho-lab/git/kconfig_case_studies/cases/" + target + "/build/kconfig.dimacs"
-cdir = "/home/jeho-lab/git/kconfig_case_studies/cases/" + target + "/build/configs_kcr"
+dimacs = "/home/jeho/kmax/kconfig_case_studies/cases/" + target + "/build/kconfig.dimacs"
+cdir = "/home/jeho/kmax/kconfig_case_studies/cases/" + target + "/build/configs"
 configlist = cdir + "/return_codes.txt"
 
 constfile = os.path.dirname(dimacs) + "/constraints.txt"

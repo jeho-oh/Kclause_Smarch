@@ -1,8 +1,13 @@
 import os
+from operator import itemgetter
+from pathlib import Path
 
-from Smarch.smarch import read_dimacs, read_constraints, sample
-from Evaluation.kconfigIO import read_config_kmax, gen_configs_kcr
-from Evaluation.search import BN
+from Smarch.smarch import read_dimacs, read_constraints, sample, checkSAT
+from Evaluation.kconfigIO import read_config_kmax, gen_configs_kcr, convert_kcr_to_kmax
+from Evaluation.search import Searcher, BN
+from Evaluation.randomness_test import get_rank
+
+home = str(Path.home())
 
 
 def count_selected(sol_):
@@ -12,7 +17,6 @@ def count_selected(sol_):
             i += 1
 
     return i
-
 
 
 def check_randconfig(dimacs_, cdir_):
@@ -41,15 +45,52 @@ def check_randconfig(dimacs_, cdir_):
 
 #check_randconfig(dimacs, cdir)
 
-target = "uClibc-ng_1_0_29"
+target = "fiasco_17_10"
 dimacs = os.path.dirname(os.path.realpath(__file__)) + "/FM/kcr/" + target + ".dimacs"
-constfile = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".const"
+constfile = os.path.dirname(os.path.realpath(__file__)) + "/FM/kcr/" + target + ".const"
 wdir = os.path.dirname(dimacs) + "/smarch"
-cdir = "/home/jeho/kmax/kconfig_case_studies/cases/" + target + "/build/kcrconfigs"
-eval = BN(target, dimacs, cdir)
+cdir = home + "/kmax/kconfig_case_studies/cases/" + target + "/build/configs"
 
-features, clauses, vcount = read_dimacs(dimacs)
-const = read_constraints(constfile, features)
-samples = sample(vcount, clauses, 10, wdir, const, False, 1)
-gen_configs_kcr(target, dimacs, samples, cdir)
+eval = BN(target, dimacs, cdir, True)
 
+# features, clauses, vcount = read_dimacs(dimacs)
+# const = read_constraints(constfile, features)
+#
+# if checkSAT(dimacs, const):
+#
+#     samples = sample(vcount, clauses, 1000, wdir, const, True, 1)
+#
+#     gen_configs_kcr(dimacs, samples, cdir)
+#     convert_kcr_to_kmax()
+#
+#     get_rank(dimacs, cdir)
+#
+#     # measure build sizes
+#     #measurements = eval.evaluate(samples)
+#     #sortedlist = sorted(measurements, key=itemgetter(1), reverse=False)
+#
+#
+#
+#     #measurements = eval.evaluate_existing()
+#
+#     # print measurements
+#     # print("<<Build sizes from 1000 URS samples>>")
+#     # for m in measurements:
+#     #     print(m)
+#
+# else:
+#     print("Constraint not satisfiable")
+
+# search for configuration with minimum buildsize as possible
+n = 150
+obj = [1]
+
+searcher = Searcher(dimacs, constfile, eval)
+result = searcher.srs(n, [1], 1, True)
+
+print()
+print("<<Search results>>")
+print("N: " + str(len(result)))
+sortedlist = sorted(result, key=itemgetter(1), reverse=False)
+print("Best: " + str(sortedlist[0][1:]))
+print(str(sortedlist[0][0]))

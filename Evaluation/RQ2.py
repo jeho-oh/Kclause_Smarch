@@ -6,12 +6,12 @@ from Evaluation.kconfigIO import read_config_kmax, gen_configs_kcr, convert_kcr_
 from Evaluation.randomness_test import get_rank, get_rank_kcr
 
 
-target = "uClibc-ng_1_0_29"
+target = "fiasco_17_10"
 dimacs = os.path.dirname(os.path.realpath(__file__)) + "/FM/kcr/" + target + ".dimacs"
 kmax = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".dimacs"
 constfile = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".const"
 wdir = os.path.dirname(dimacs) + "/smarch"
-jsonfile = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".json"
+jsonfile = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + "_build.json"
 
 features, clauses, vcount = read_dimacs(dimacs)
 const = read_constraints(constfile, features)

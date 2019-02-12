@@ -1,5 +1,5 @@
 # Smarch
-Smarch is a tool to Uniformly Random Sample (URS) solutions of a propositional formula.
+Smarch is a tool to Uniformly Random Sample (URS) solutions of a propositional formula. For a given dimacs file, Smarch will count the number of solutions, generate a random number from 1 to number of solutions, and create a one-to-one mapping between a random number and a configuraiton.
 
 ## Prerequisites
 Smarch relies on following tools:

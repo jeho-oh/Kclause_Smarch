@@ -453,4 +453,9 @@ if __name__ == "__main__":
 
     samples = sample(vcount, clauses, n, wdir, const, cache, start)
 
-    print('Output created on: ', wdir)
+    f = open(wdir + "/samples.txt", 'w')
+    for s in samples:
+        f.write(str(s) + "\n")
+    f.close()
+
+    print('Output samples created on: ', wdir + "/samples.txt")

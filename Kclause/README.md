@@ -1,3 +1,12 @@
+The Kclause tool was originally developed as part of the Kmax
+codebase.  Kmax performs static analysis of Makefiles to extract
+configuration conditions.  It originally used a simple algorithm over
+Kconfig constraints to determine the set of non-false variables by
+hacking the Linux Kconfig parser.  The Kclause tool started as a
+further extension of this parser and grew into its own algorithm and
+tool including the `check_dep --dimacs` program and the `dimacs.py`
+converter.
+
 ## Extracting Kconfig Constraints
 
 Build the Kconfig parser:

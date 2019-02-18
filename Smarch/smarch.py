@@ -413,7 +413,7 @@ if __name__ == "__main__":
         sys.exit(2)
 
     if len(args) < 2:
-        print('smarch.py -c <constfile> -o <outputdir> -s <start> -l | <dimacsfile> <samplecount>')
+        print('smarch.py -c <constfile> -o <outputdir> -s | <dimacsfile> <samplecount>')
         sys.exit(2)
 
     dimacs = args[0]
@@ -429,7 +429,7 @@ if __name__ == "__main__":
 
     for opt, arg in opts:
         if opt == '-h':
-            print('smarch.py -c <constfile> -o <outputdir> -s <start> -l | <dimacsfile> <samplecount>')
+            print('smarch.py -c <constfile> -o <outputdir> -s | <dimacsfile> <samplecount>')
             sys.exit()
         elif opt in ("-c", "--cfile"):
             constfile = arg
@@ -437,9 +437,9 @@ if __name__ == "__main__":
         elif opt in ("-o", "--odir"):
             wdir = arg
             print("Output directory: " + wdir)
-        elif opt in ("-s", "--start"):
-            start = int(arg)
-            print("Starting number:" + arg)
+        # elif opt in ("-s", "--start"):
+        #     start = int(arg)
+        #     print("Starting number:" + arg)
         elif opt in ("-l", "--log"):
             start = int(arg)
             cache = True

@@ -59,7 +59,6 @@ def get_rank(dimacs_, dir_, jsonfile_):
 
 
 def get_rank_kcr(dimacs_, solset_, jsonfile_):
-
     # read tree structure from file
     _treefile = os.path.dirname(dimacs_) + '/smarch/tree.json'
     # node = AnyNode(count=-1, cube=[])

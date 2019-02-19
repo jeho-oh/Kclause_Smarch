@@ -12,7 +12,8 @@ n = 1000
 dimacs = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".dimacs"
 jsonfile = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".json"
 
-randir = os.path.dirname(os.path.realpath(__file__)) + "/Configs/randconfig/" + target + "/" + str(n) + "/"
+randir = os.path.dirname(os.path.realpath(__file__)) + "/Configs/" + target + "/" + str(n) + "/randconfig"
+
 
 # check randconfig randomness
 get_rank(dimacs, randir, jsonfile)

@@ -236,6 +236,18 @@ def read_config_kmax(features_, config_):
     return sol
 
 
+def read_configs_kmax(features_, cdir_):
+    samples = list()
+
+    for file in os.listdir(cdir_):
+        if file.endswith('.config'):
+            # convert config file into variable list
+            sol = read_config_kmax(features_, cdir_ + "/" + file)
+            samples.append(sol)
+
+    return samples
+
+
 def build_samples(target_, configs_):
     # run vagrant for build
     if target_ == 'fiasco_17_10':

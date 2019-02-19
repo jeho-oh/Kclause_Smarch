@@ -6,7 +6,7 @@ from Evaluation.kconfigIO import read_config_kmax, gen_configs_kcr, convert_kcr_
 from Evaluation.randomness_test import get_rank, get_rank_kcr
 
 
-target = "fiasco_17_10"
+target = "axtls_2_1_4"
 dimacs = os.path.dirname(os.path.realpath(__file__)) + "/FM/kcr/" + target + ".dimacs"
 kmax = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".dimacs"
 constfile = os.path.dirname(os.path.realpath(__file__)) + "/FM/" + target + ".const"
@@ -17,7 +17,7 @@ features, clauses, vcount = read_dimacs(dimacs)
 const = read_constraints(constfile, features)
 
 if checkSAT(dimacs, const):
-    samples = sample(vcount, clauses, 1000, wdir, const, False, 1)
+    samples = sample(vcount, clauses, 100, wdir, const, False, 1)
     solset = convert_kcr_to_kmax(dimacs, kmax, samples)
     get_rank_kcr(kmax, solset, jsonfile)
 else:

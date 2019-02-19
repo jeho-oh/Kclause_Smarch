@@ -127,7 +127,6 @@ def gen_dimacs(vars_, clauses_, constraints_, outfile_):
     """generate a dimacs file from given clauses and constraints"""
 
     f = open(outfile_, 'w')
-
     f.write('p cnf ' + vars_ + ' ' + str(len(clauses_) + len(constraints_)) + '\n')
 
     for cl in clauses_:
@@ -206,6 +205,10 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
         with open(_cubefile) as f:
             for _line in f:
                 _cube = list(_line.split())
+                if 'a' in _cube:
+                    _cube.remove('a')
+                if '0' in _cube:
+                    _cube.remove('0')
                 _cubes.append(_cube)
 
         # execute sharpSAT to count solutions
@@ -216,9 +219,9 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
             _total += res
             _counts.append(res)
 
-        # double check if all variables are free (nonempty freevar means all free)
-        if _total != pow(2, len(_freevar)):
-            _freevar.clear()
+        # # double check if all variables are free (nonempty freevar means all free)
+        # if _total != pow(2, len(_freevar)):
+        #     _freevar.clear()
 
         # set total number of solutions
         current_.count = _total
@@ -405,6 +408,24 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
 
 # run script
 if __name__ == "__main__":
+    # get external location for sharpSAT and march if needed
+    if os.path.exists(srcdir + "/links.txt"):
+        with open(srcdir + "/links.txt") as f:
+            for _line in f:
+                link = list(_line.split('='))
+                if len(link) != 0 and link[0][0] != '#':
+                    if link[0] == "SHARPSAT":
+                        SHARPSAT = link[1]
+                    elif link[0] == "MARCH":
+                        MARCH = link[1]
+
+    # check sharpSAT and march_cu existence
+    if not os.path.exists(SHARPSAT):
+        print("ERROR: sharpSAT not found")
+
+    if not os.path.exists(MARCH):
+        print("ERROR: March solver not found")
+
     # get parameters from console
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hc:o:s:l", ['help', "cfile=", "odir=", "start=", 'log'])

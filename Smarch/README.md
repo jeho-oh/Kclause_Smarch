@@ -4,7 +4,7 @@ Smarch is a tool to Uniformly Random Sample (URS) solutions of a propositional f
 ## Prerequisites
 Smarch relies on following tools:
 * sharpSAT (https://sites.google.com/site/marcthurley/sharpsat): A exact model counting tool. To build, run make inside Release folder.
-* march_cu (https://github.com/marijnheule/march-SAT-solver): Solver based on cube-and-conquer algorithm. To build, run make inside folder.
+* march_cu (https://github.com/marijnheule/CnC): Solver based on cube-and-conquer algorithm. To build, run make inside folder.
 
 Source files for both tools are included in the repository.
 You can build each tool by running make.

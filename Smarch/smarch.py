@@ -169,7 +169,7 @@ def checkSAT(dimacs_, constraints_):
         return True
 
 
-def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
+def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quiet_=False):
     """sample configurations"""
 
     if not os.path.exists(wdir_):
@@ -209,6 +209,7 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
                     _cube.remove('a')
                 if '0' in _cube:
                     _cube.remove('0')
+
                 _cubes.append(_cube)
 
         # execute sharpSAT to count solutions
@@ -219,9 +220,9 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
             _total += res
             _counts.append(res)
 
-        # # double check if all variables are free (nonempty freevar means all free)
-        # if _total != pow(2, len(_freevar)):
-        #     _freevar.clear()
+        # double check if all variables are free (nonempty freevar means all free)
+        if _total != pow(2, len(_freevar)):
+            _freevar.clear()
 
         # set total number of solutions
         current_.count = _total
@@ -305,10 +306,12 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
     clauses_ = clauses_ + const_
 
     root = AnyNode(count=-1, cube=[])
-    print("Counting - ", end='')
+    if not quiet_:
+        print("Counting - ", end='')
     freevar = partition([], root, cache_)
 
-    print("Total configurations: " + str(freevar[3]))
+    if not quiet_:
+        print("Total configurations: " + str(freevar[3]))
 
     start_time = time.time()
 
@@ -319,7 +322,8 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
 
     # sample for each random number
     for r in rands:
-        print("Sampling " + str(i) + " with " + str(r) + " - ", end='')
+        if not quiet_:
+            print("Sampling " + str(i) + " with " + str(r) + " - ", end='')
         sample_time = time.time()
 
         # initialize variables
@@ -378,10 +382,12 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1):
         # print(len(s))
         samples.append(set(s))
 
-        print("sampling time: " + str(time.time() - sample_time))
+        if not quiet_:
+            print("sampling time: " + str(time.time() - sample_time))
         i += 1
 
-    print("--- total time: %s seconds ---" % (time.time() - start_time))
+    if not quiet_:
+        print("--- total time: %s seconds ---" % (time.time() - start_time))
 
     if cache_:
         exporter = JsonExporter()

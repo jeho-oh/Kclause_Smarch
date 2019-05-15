@@ -21,6 +21,7 @@ SHARPSAT = srcdir + '/sharpSAT/Release/sharpSAT'
 MARCH = srcdir + '/march_cu/march_cu'
 
 
+
 def read_dimacs(dimacsfile_):
     """parse variables and clauses from a dimacs file"""
 
@@ -197,7 +198,7 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quie
         out = res.split("\n")
 
         # print march result (debugging purpose)
-        # print(out)
+        #print(out)
 
         if out[7].startswith('c all'):
             _freevar = out[5].split(": ")[1].split()
@@ -380,7 +381,12 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quie
         # print(res)
 
         # print(len(s))
-        samples.append(set(s))
+
+        if s == 'UNSAT':
+            print("ERROR: Sample Invalid")
+            exit(1)
+        else:
+            samples.append(set(s))
 
         if not quiet_:
             print("sampling time: " + str(time.time() - sample_time))

@@ -459,6 +459,7 @@ if __name__ == "__main__":
     constfile = ''
     start = 1
     cache = False
+    out = False
 
     for opt, arg in opts:
         if opt == '-h':
@@ -469,6 +470,7 @@ if __name__ == "__main__":
             print("Consraint file: " + constfile)
         elif opt in ("-o", "--odir"):
             wdir = arg
+            out = True
             print("Output directory: " + wdir)
         # elif opt in ("-s", "--start"):
         #     start = int(arg)
@@ -486,9 +488,17 @@ if __name__ == "__main__":
 
     samples = sample(vcount, clauses, n, wdir, const, cache, start)
 
-    f = open(wdir + "/samples.txt", 'w')
-    for s in samples:
-        f.write(str(s) + "\n")
-    f.close()
+    base = os.path.basename(dimacs)
+    target = os.path.splitext(base)[0]
+    samplefile = wdir + "/" + target + "_" + str(n) + ".samples"
 
-    print('Output samples created on: ', wdir + "/samples.txt")
+    if out:
+        f = open(wdir + "/" + target + "_" + str(n) + ".samples", 'w')
+        for s in samples:
+            for v in s:
+                f.write(str(v))
+                f.write(",")
+            f.write("\n")
+        f.close()
+
+        print('Output samples created on: ', samplefile)

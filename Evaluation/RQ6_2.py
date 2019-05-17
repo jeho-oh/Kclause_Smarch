@@ -1,6 +1,6 @@
 import os
 
-from Smarch.smarch import count, read_dimacs, get_var, checkSAT
+from Kclause_Smarch.Smarch.smarch import count, read_dimacs, get_var, checkSAT
 
 
 def check_contains(config_, feature_):

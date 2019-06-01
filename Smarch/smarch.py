@@ -11,6 +11,7 @@ import os
 import time
 import sys
 import getopt
+import shutil
 
 from anytree import AnyNode
 from anytree.exporter import JsonExporter
@@ -170,14 +171,11 @@ def checkSAT(dimacs_, constraints_):
         return True
 
 
-def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quiet_=False):
+def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, quiet_=False, samplefile_=""):
     """sample configurations"""
 
     if not os.path.exists(wdir_):
         os.makedirs(wdir_)
-    sdir = wdir_ + "/smarch/samples"
-    if not os.path.exists(sdir):
-        os.makedirs(sdir)
 
     samples = list()
 
@@ -198,7 +196,7 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quie
         out = res.split("\n")
 
         # print march result (debugging purpose)
-        #print(out)
+        # print(out)
 
         if out[7].startswith('c all'):
             _freevar = out[5].split(": ")[1].split()
@@ -319,7 +317,12 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quie
     # generate random numbers
     rands = get_random(n_, freevar[3])
 
-    i = start_
+    if samplefile_ != "":
+        f = open(samplefile_, "w")
+    else:
+        f = ""
+
+    i = 0
 
     # sample for each random number
     for r in rands:
@@ -386,10 +389,17 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quie
             print("ERROR: Sample Invalid")
             exit(1)
         else:
-            samples.append(set(s))
+            if samplefile_ == "":
+                samples.append(set(s))
+            else:
+                for v in s:
+                    f.write(str(v))
+                    f.write(",")
+                f.write("\n")
 
         if not quiet_:
             print("sampling time: " + str(time.time() - sample_time))
+
         i += 1
 
     if not quiet_:
@@ -400,6 +410,11 @@ def sample(vcount_, clauses_, n_, wdir_, const_=(), cache_=False, start_=1, quie
         with open(wdir_ + "/tree.json", 'w') as file:
             file.write(exporter.export(root))
             file.close()
+    else:
+        shutil.rmtree(wdir_)
+
+    if samplefile_ != "":
+        f.close()
 
     return samples
 
@@ -440,16 +455,19 @@ if __name__ == "__main__":
 
     # get parameters from console
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hc:o:s:l", ['help', "cfile=", "odir=", "start=", 'log'])
+        opts, args = getopt.getopt(sys.argv[1:], "hc:o:q", ['help', "cfile=", "odir=", 'quiet'])
     except getopt.GetoptError:
-        print('smarch.py -c <constfile> -o <outputdir> -s <start> -l | <dimacsfile> <samplecount>')
+        print('smarch.py -c <constfile> -o <outputdir> -q| <dimacsfile> <samplecount>')
         sys.exit(2)
 
     if len(args) < 2:
-        print('smarch.py -c <constfile> -o <outputdir> -s | <dimacsfile> <samplecount>')
+        print('smarch.py -c <constfile> -o <outputdir> -q | <dimacsfile> <samplecount>')
         sys.exit(2)
 
     dimacs = args[0]
+    base = os.path.basename(dimacs)
+    target = os.path.splitext(base)[0]
+
     n = int(args[1])
 
     print('Input file: ', dimacs)
@@ -457,7 +475,8 @@ if __name__ == "__main__":
 
     wdir = os.path.dirname(dimacs) + "/smarch"
     constfile = ''
-    start = 1
+    samplefile = ""
+    quiet = False
     cache = False
     out = False
 
@@ -469,15 +488,16 @@ if __name__ == "__main__":
             constfile = arg
             print("Consraint file: " + constfile)
         elif opt in ("-o", "--odir"):
-            wdir = arg
+            odir = arg
+            wdir = odir + "/smarch"
+            samplefile = odir + "/" + target + "_" + str(n) + ".samples"
             out = True
             print("Output directory: " + wdir)
-        # elif opt in ("-s", "--start"):
-        #     start = int(arg)
-        #     print("Starting number:" + arg)
         elif opt in ("-l", "--log"):
             start = int(arg)
             cache = True
+        elif opt in ("-q", "--quiet"):
+            quiet = True
         else:
             print("Invalid option: " + opt)
 
@@ -486,19 +506,15 @@ if __name__ == "__main__":
     if constfile != '':
         read_constraints(constfile, features)
 
-    samples = sample(vcount, clauses, n, wdir, const, cache, start)
-
-    base = os.path.basename(dimacs)
-    target = os.path.splitext(base)[0]
-    samplefile = wdir + "/" + target + "_" + str(n) + ".samples"
+    samples = sample(vcount, clauses, n, wdir, const, cache, quiet, samplefile)
 
     if out:
-        f = open(wdir + "/" + target + "_" + str(n) + ".samples", 'w')
-        for s in samples:
-            for v in s:
-                f.write(str(v))
-                f.write(",")
-            f.write("\n")
-        f.close()
+        # f = open(wdir + "/" + target + "_" + str(n) + ".samples", 'w')
+        # for s in samples:
+        #     for v in s:
+        #         f.write(str(v))
+        #         f.write(",")
+        #     f.write("\n")
+        # f.close()
 
         print('Output samples created on: ', samplefile)

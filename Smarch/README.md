@@ -1,3 +1,6 @@
+# Important Note
+This repository is deprecated. Please go to https://github.com/jeho-oh/Smarch for the latest version.
+
 # Smarch
 Smarch is a tool to Uniformly Random Sample (URS) solutions of a propositional formula. For a given dimacs file, Smarch will count the number of solutions, generate a random number from 1 to number of solutions, and create a one-to-one mapping between a random number and a configuraiton.
 
